@@ -1,141 +1,53 @@
-// This audio file will be use when we perform any operation to DB
+// Initialize the audio file for operations
 const Sound = new Audio("audio.wav");
-document.addEventListener("load", () => {
-  /* It loads the UI when the page reloads*/
+
+// Event listener to load the UI when the page reloads
+document.addEventListener("DOMContentLoaded", () => {
   getItems();
 });
 
 /* 
-
 Basic Structure of our db object in local storage
 *********************************************
-db={
-  id:"id",
-  todoText:'text',
-  status:'completed'
+db = {
+  id: "id",
+  todoText: 'text',
+  status: 'completed'
+}
+*/
 
-}   */
-
-//Checks the number of todolist stored in local
-//storage
-function getTaskLength() {
-  let db = JSON.parse(localStorage.getItem("todoList")) || [];
+// Get the number of tasks in the local storage
+function getTaskLength(db) {
   return db.length;
 }
 
-// Checks total active task
-function getActiveTaskLength() {
-  let db = JSON.parse(localStorage.getItem("todoList")) || [];
-  let activeItems = db.filter((item) => item.status === "active");
-
-  return activeItems.length;
+// Get the number of active tasks in the local storage
+function getActiveTaskLength(db) {
+  return db.filter(item => item.status === "active").length;
 }
 
-// Get the todo list from local storage and render in UI with the help of generateItems() function.
+// Retrieve and render the todo list from local storage
 function getItems() {
-  // This will loads the 'todoList' object from database .
-  // If there is no db in local storage then it will assign a empty array
-  // later stage it will update db with object 'todoList' with addItems() funtion.
   let db = JSON.parse(localStorage.getItem("todoList")) || [];
-  console.log("All items: ", db);
   if (db.length > 0) {
-    let activeItems = db.filter((item) => item.status === "active");
-    console.log("Active items: ", activeItems);
+    const activeItems = db.filter(item => item.status === "active");
+    const completedItems = db.filter(item => item.status === "completed");
+
     generateItems(activeItems, "active");
-    let completedItems = db.filter((item) => item.status === "completed");
-    console.log("Completed items: ", completedItems);
     generateItems(completedItems, "completed");
   }
-  updateTask();
+  updateTask(db);
 }
 
-/*
-generateItems(param,param), is the main function which take cares for creating HTML element 
-according to available todo list in local storage.
-
-It takes two parameter, one is @items and other is @status. @items is actualy an array instance
-of local data storage and @status takes care whether the it is 'completed' or 'active' todo list. 
-
-*/
+// Generate and append todo items to the UI based on their status
 function generateItems(items, status) {
-  let todoContainer = document.querySelector("#todo-items");
-  // let todoContainer = document.getElementById("todo-container");
+  const todoContainer = document.querySelector("#todo-items");
   if (status === "active") {
     todoContainer.innerHTML = "";
   }
-  items.forEach((item) => {
-    let todoItem = document.createElement("div");
-    todoItem.dataset.itemId = item.id;
-    todoItem.classList.add("todo-item");
-
-    let left = document.createElement("div");
-    left.classList.add("left");
-
-    let check = document.createElement("div");
-    check.classList.add("check");
-    if (item.status === "completed") {
-      check.classList.add("checked");
-    }
-
-    let checkMark = document.createElement("div");
-    checkMark.classList.add("check-mark");
-    if (item.status === "completed") {
-      checkMark.classList.add("checked");
-    }
-    checkMark.addEventListener("click", function () {
-      toggleCheckClass(checkMark);
-    });
-
-    checkMark.innerHTML = '<i class="fa-solid fa-check"></i>';
-    check.appendChild(checkMark);
-
-    let todoTextElm = document.createElement("div");
-    todoTextElm.classList.add("todo-text");
-    if (item.status === "completed") {
-      todoTextElm.classList.add("checked");
-    }
-
-    let todoInput = document.createElement("input");
-    todoInput.classList.add("text");
-    todoInput.type = "text";
-    todoInput.value = item.todoText;
-    todoInput.setAttribute("readonly", "readonly");
-
-    todoTextElm.appendChild(todoInput);
-
-    left.appendChild(check);
-    left.appendChild(todoTextElm);
-
-    let right = document.createElement("div");
-    right.classList.add("right");
-
-    let edit = document.createElement("div");
-    edit.classList.add("edit");
-    if (item.status === "completed") {
-      edit.classList.add("hide");
-    }
-    edit.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
-
-    let del = document.createElement("div");
-    del.classList.add("del");
-    del.innerHTML = '<i class="fa-solid fa-trash"></i>';
-    del.addEventListener("click", function (event) {
-      removeTodo(event.target);
-    });
-
-    edit.addEventListener("click", (e) => {
-      editTodo(e.target);
-    });
-
-    right.appendChild(edit);
-    right.appendChild(del);
-
-    todoItem.appendChild(left);
-    todoItem.appendChild(right);
-
-    // Appending complete task to the end of UI
+  items.forEach(item => {
+    const todoItem = createTodoItem(item, status);
     if (status === "active") {
-      // Active item in top of UI
       todoContainer.insertBefore(todoItem, todoContainer.firstChild);
     } else {
       todoContainer.appendChild(todoItem);
@@ -143,141 +55,177 @@ function generateItems(items, status) {
   });
 }
 
-// This updateTask() function takes care to update number of task remaining in databse including active, completed.
-// and update in the UI.
-function updateTask() {
-  let totalTasks = getTaskLength();
-  let activeTask = getActiveTaskLength();
+// Create a todo item HTML element
+function createTodoItem(item, status) {
+  const todoItem = document.createElement("div");
+  todoItem.dataset.itemId = item.id;
+  todoItem.classList.add("todo-item");
 
-  console.log("Update Task Called: ", totalTasks);
+  const left = document.createElement("div");
+  left.classList.add("left");
 
-  const total = document.querySelector(".items-left");
-  const activeT = document.querySelector(".activeT");
-  const completedT = document.querySelector(".completedT");
-
-  total.innerText = `Task (${totalTasks})`;
-  activeT.innerText = `Active (${activeTask})`;
-  completedT.innerText = `Completed (${totalTasks - activeTask})`;
-}
-
-// removeChecked() removes completed task
-function removeChecked() {
-  let db = JSON.parse(localStorage.getItem("todoList")) || [];
-  let todoItems = document.querySelectorAll(".todo-item");
-  todoItems.forEach(function (item) {
-    let itemId = item.dataset.itemId;
-    let checkMark = item.querySelector(".check-mark");
-    if (checkMark.classList.contains("checked")) {
-      db = db.filter((i) => i.id !== itemId);
-      item.remove();
-    }
-  });
-  localStorage.setItem("todoList", JSON.stringify(db));
-  updateTask();
-}
-
-// toggleCheckClass()  marks element active to completed and vice versa
-function toggleCheckClass(element) {
-  element.classList.toggle("checked");
-  const todoText = element.closest(".todo-item").querySelector(".todo-text");
-  if (element.classList.contains("checked")) {
-    todoText.classList.add("checked");
-    Sound.play();
-  } else {
-    todoText.classList.remove("checked");
-    Sound.play();
+  const check = document.createElement("div");
+  check.classList.add("check");
+  if (item.status === "completed") {
+    check.classList.add("checked");
   }
 
-  let itemId = element.closest(".todo-item").dataset.itemId;
+  const checkMark = document.createElement("div");
+  checkMark.classList.add("check-mark");
+  if (item.status === "completed") {
+    checkMark.classList.add("checked");
+  }
+  checkMark.addEventListener("click", toggleCheckClass);
+
+  checkMark.innerHTML = '<i class="fa-solid fa-check"></i>';
+  check.appendChild(checkMark);
+
+  const todoTextElm = document.createElement("div");
+  todoTextElm.classList.add("todo-text");
+  if (item.status === "completed") {
+    todoTextElm.classList.add("checked");
+  }
+
+  const todoInput = document.createElement("input");
+  todoInput.classList.add("text");
+  todoInput.type = "text";
+  todoInput.value = item.todoText;
+  todoInput.setAttribute("readonly", "readonly");
+
+  todoTextElm.appendChild(todoInput);
+
+  left.appendChild(check);
+  left.appendChild(todoTextElm);
+
+  const right = document.createElement("div");
+  right.classList.add("right");
+
+  const edit = document.createElement("div");
+  edit.classList.add("edit");
+  if (item.status === "completed") {
+    edit.classList.add("hide");
+  }
+  edit.innerHTML = '<i class="fa-solid fa-pen-to-square"></i>';
+  edit.addEventListener("click", editTodo);
+
+  const del = document.createElement("div");
+  del.classList.add("del");
+  del.innerHTML = '<i class="fa-solid fa-trash"></i>';
+  del.addEventListener("click", removeTodo);
+
+  right.appendChild(edit);
+  right.appendChild(del);
+
+  todoItem.appendChild(left);
+  todoItem.appendChild(right);
+
+  return todoItem;
+}
+
+// Update the task counts in the UI
+function updateTask(db) {
+  const totalTasks = getTaskLength(db);
+  const activeTask = getActiveTaskLength(db);
+
+  document.querySelector(".items-left").innerText = `Task (${totalTasks})`;
+  document.querySelector(".activeT").innerText = `Active (${activeTask})`;
+  document.querySelector(".completedT").innerText = `Completed (${totalTasks - activeTask})`;
+}
+
+// Remove all checked (completed) tasks
+function removeChecked() {
   let db = JSON.parse(localStorage.getItem("todoList")) || [];
-  let itemIndex = db.findIndex((i) => i.id === itemId);
+  db = db.filter(item => !document.querySelector(`[data-item-id="${item.id}"] .check-mark`).classList.contains("checked"));
+  localStorage.setItem("todoList", JSON.stringify(db));
+  getItems();
+}
+
+// Toggle the check status of a todo item
+function toggleCheckClass(event) {
+  const element = event.target.closest(".check-mark");
+  element.classList.toggle("checked");
+  Sound.play();
+
+  const todoItem = element.closest(".todo-item");
+  const todoText = todoItem.querySelector(".todo-text");
+  todoText.classList.toggle("checked");
+
+  const itemId = todoItem.dataset.itemId;
+  let db = JSON.parse(localStorage.getItem("todoList")) || [];
+  const itemIndex = db.findIndex(item => item.id === itemId);
   if (itemIndex !== -1) {
-    db[itemIndex].status =
-      db[itemIndex].status === "active" ? "completed" : "active";
+    db[itemIndex].status = db[itemIndex].status === "active" ? "completed" : "active";
     localStorage.setItem("todoList", JSON.stringify(db));
     getItems();
   }
 }
 
-// removeTodo() removes the perticular todolisr form the todo
-function removeTodo(delButton) {
+// Remove a specific todo item
+function removeTodo(event) {
+  const delButton = event.target.closest(".del");
   let db = JSON.parse(localStorage.getItem("todoList")) || [];
-  let todoItem = delButton.closest(".todo-item");
-  let itemId = todoItem.dataset.itemId;
-  db = db.filter((item) => item.id !== itemId);
-  console.log("inside db: ", db);
+  const todoItem = delButton.closest(".todo-item");
+  const itemId = todoItem.dataset.itemId;
+  db = db.filter(item => item.id !== itemId);
   localStorage.setItem("todoList", JSON.stringify(db));
-  todoItem.parentNode.removeChild(todoItem);
-  updateTask();
+  todoItem.remove();
+  updateTask(db);
   Sound.play();
 }
 
-// editTodo() is used to edit a particular todo
-function editTodo(editButton) {
-  let todoItem = editButton.closest(".todo-item");
-  let todoInput = todoItem.querySelector(".todo-text input");
+// Edit a specific todo item
+function editTodo(event) {
+  const editButton = event.target.closest(".edit");
+  const todoItem = editButton.closest(".todo-item");
+  const todoInput = todoItem.querySelector(".todo-text input");
 
   if (editButton.classList.contains("fa-pen-to-square")) {
-    editButton.classList.remove("fa-pen-to-square");
-    editButton.classList.add("fa-save");
+    editButton.classList.replace("fa-pen-to-square", "fa-save");
     todoInput.removeAttribute("readonly");
     todoInput.focus();
-    Sound.play();
   } else {
-    editButton.classList.remove("fa-save");
-    editButton.classList.add("fa-pen-to-square");
+    editButton.classList.replace("fa-save", "fa-pen-to-square");
     todoInput.setAttribute("readonly", "readonly");
-    // update the value to localStorage here
-    let itemId = todoItem.dataset.itemId;
+
+    const itemId = todoItem.dataset.itemId;
     let db = JSON.parse(localStorage.getItem("todoList")) || [];
-    let itemIndex = db.findIndex((i) => i.id === itemId);
+    const itemIndex = db.findIndex(item => item.id === itemId);
     if (itemIndex !== -1) {
       db[itemIndex].todoText = todoInput.value;
       localStorage.setItem("todoList", JSON.stringify(db));
     }
-    Sound.play();
   }
+  Sound.play();
 }
 
-// This function generate random number of given length, we used this genrator to genrate our todo Id.
+// Generate a random string of a given length for the todo ID
 function generateRandomString(length) {
-  var characters =
-    "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  var result = "todo";
-  for (var i = 0; i < length - 4; i++) {
+  const characters = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  let result = "todo";
+  for (let i = 0; i < length - 4; i++) {
     result += characters.charAt(Math.floor(Math.random() * characters.length));
   }
   return result;
 }
 
-// This addItem() calls when we want to add new todo in our todo.
+// Add a new todo item
 function addItem(event) {
-  Sound.play();
   event.preventDefault();
+  Sound.play();
 
-  // Geting todoList from local storage.
-  // If there is no todoList stored in storage then it assign to empty array.
   let db = JSON.parse(localStorage.getItem("todoList")) || [];
-  console.log("Add Called, Lentght of DB: ", db.length);
-  let textInput = document.querySelector("#todo-input");
-  // Creating new Todo
-  let newTodo = {
+  const textInput = document.querySelector("#todo-input");
+  const newTodo = {
     todoText: textInput.value,
     status: "active",
     id: generateRandomString(10)
   };
-  console.log("data added");
 
-  // Updating with current db
   db.push(newTodo);
-
-  // Saving to local Storage
   localStorage.setItem("todoList", JSON.stringify(db));
   textInput.value = "";
   getItems();
-  updateTask();
 }
 
-// rendering the UI.
+// Initial rendering of the UI
 getItems();
-/// hello 
